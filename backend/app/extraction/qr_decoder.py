@@ -12,8 +12,15 @@ Features:
 
 import cv2
 import re
-from pyzbar import pyzbar
 from typing import Optional, Dict, Any, List
+
+# Make pyzbar optional - not all systems have zbar library installed
+try:
+    from pyzbar import pyzbar
+    PYZBAR_AVAILABLE = True
+except ImportError:
+    PYZBAR_AVAILABLE = False
+    print("⚠️ Warning: pyzbar not available. QR code scanning will be disabled.")
 
 
 class QRDecoder:
@@ -34,8 +41,12 @@ class QRDecoder:
                 - parsed: dict with structured info (if vcard/url)
                 - all_codes: list of all detected QR codes with same structure
         Or:
-            None, if no QR codes found.
+            None, if no QR codes found or pyzbar not available.
         """
+        # Return None if pyzbar is not installed
+        if not PYZBAR_AVAILABLE:
+            return None
+
         img = cv2.imread(image_path)
         if img is None:
             return None

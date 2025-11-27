@@ -1,12 +1,10 @@
 # Python Backend Requirements for INDAS Exhibition Lead Capture System
-# Tested with Python 3.12
+# Tested with Python 3.10+
 
 # SYSTEM DEPENDENCIES REQUIRED:
-# 1. FFmpeg - Install before running pip install:
-#    Windows: choco install ffmpeg
-#    Mac: brew install ffmpeg
-#    Linux: sudo apt install ffmpeg
-# 2. ODBC Driver 17 for SQL Server
+# 1. ODBC Driver 17 for SQL Server
+#    Linux: sudo apt install unixodbc unixodbc-dev
+#    Windows/Mac: Download from Microsoft
 
 # Web Framework
 fastapi>=0.121.0
@@ -19,15 +17,25 @@ pyodbc>=5.3.0
 # AI & ML
 openai>=2.8.0
 
-# Image Processing & OCR
+# Image Processing & OCR (Core - Required)
 opencv-python-headless>=4.12.0
 easyocr>=1.7.0
-pyzbar>=0.1.9
 Pillow>=12.0.0
 numpy>=2.2.0,<2.3.0
 
-# Audio Processing
-ffmpeg-python>=0.2.0
+# Optional Features (can be commented out if not needed)
+# QR Code Scanner - Requires system library 'libzbar'
+#   Linux: sudo apt install libzbar0
+#   Mac: brew install zbar
+#   Windows: Download from https://sourceforge.net/projects/zbar/
+# pyzbar>=0.1.9
+
+# Audio Processing - Only needed for WhatsApp voice notes (not web voice)
+# Requires FFmpeg system binary
+#   Linux: sudo apt install ffmpeg
+#   Mac: brew install ffmpeg
+#   Windows: choco install ffmpeg
+# ffmpeg-python>=0.2.0
 
 # Utilities
 python-dotenv>=1.2.0
