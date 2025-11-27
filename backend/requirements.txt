@@ -1,0 +1,55 @@
+# Python Backend Requirements for INDAS Exhibition Lead Capture System
+# Tested with Python 3.12
+
+# SYSTEM DEPENDENCIES REQUIRED:
+# 1. FFmpeg - Install before running pip install:
+#    Windows: choco install ffmpeg
+#    Mac: brew install ffmpeg
+#    Linux: sudo apt install ffmpeg
+# 2. ODBC Driver 17 for SQL Server
+
+# Web Framework
+fastapi>=0.121.0
+uvicorn[standard]>=0.38.0
+python-multipart>=0.0.20
+
+# Database
+pyodbc>=5.3.0
+
+# AI & ML
+openai>=2.8.0
+
+# Image Processing & OCR
+opencv-python-headless>=4.12.0
+easyocr>=1.7.0
+pyzbar>=0.1.9
+Pillow>=12.0.0
+numpy>=2.2.0,<2.3.0
+
+# Audio Processing
+ffmpeg-python>=0.2.0
+
+# Utilities
+python-dotenv>=1.2.0
+pydantic>=2.12.0
+pydantic-settings>=2.12.0
+email-validator>=2.0.0
+
+# Authentication & Security
+python-jose[cryptography]>=3.5.0
+passlib[bcrypt]>=1.7.4
+
+# HTTP Client (for WhatsApp API calls)
+httpx>=0.28.0
+requests>=2.32.0
+
+# Scheduler for automated tasks
+APScheduler>=3.10.0
+
+# NLP & Date Parsing
+dateparser>=1.2.0
+python-dateutil>=2.8.2
+
+# Testing (Optional)
+pytest>=7.4.0,<8.0.0
+pytest-asyncio>=0.23.0
