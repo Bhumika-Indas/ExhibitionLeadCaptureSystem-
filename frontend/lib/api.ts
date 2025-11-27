@@ -213,12 +213,14 @@ class ApiClient {
   async extractVoice(
     audioFile: Blob,
     leadId: number,
-    employeeId: number
+    employeeId?: number
   ): Promise<VoiceExtractionResult> {
     const formData = new FormData();
     formData.append('audio_file', audioFile, 'voice_note.webm');
     formData.append('lead_id', leadId.toString());
-    formData.append('employee_id', employeeId.toString());
+    if (employeeId) {
+      formData.append('employee_id', employeeId.toString());
+    }
 
     const { data } = await this.client.post<VoiceExtractionResult>(
       '/api/extraction/voice',

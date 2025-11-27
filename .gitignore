@@ -58,3 +58,4 @@ htmlcov/
 *.tmp
 .cache/
 ffmpeg.zip
+*.zip
