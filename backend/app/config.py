@@ -53,7 +53,11 @@ class Settings(BaseSettings):
 
     # API Settings
     API_PREFIX: str = "/api"
-    CORS_ORIGINS: list = ["http://localhost:3000", "http://localhost:3001"]
+    CORS_ORIGINS: list = [
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "http://103.150.136.76:3003"  # Production frontend
+    ]
 
     class Config:
         env_file = ".env"
