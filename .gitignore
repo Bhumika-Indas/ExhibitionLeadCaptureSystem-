@@ -36,7 +36,13 @@ build/
 *~
 
 # Uploads and temporary files
-backend/uploads/
+# Keep directory structure but ignore uploaded files
+backend/uploads/**/*
+!backend/uploads/whatsapp/
+!backend/uploads/documents/
+!backend/uploads/cards/
+!backend/uploads/audio/
+!backend/uploads/**/.gitkeep
 *.log
 
 # Database
