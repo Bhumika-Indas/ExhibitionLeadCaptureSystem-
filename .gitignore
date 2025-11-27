@@ -57,3 +57,4 @@ htmlcov/
 *.bak
 *.tmp
 .cache/
+ffmpeg.zip
