@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { isAuthenticated, getEmployee } from '@/lib/auth';
@@ -28,7 +28,7 @@ interface Lead {
   status_code?: string;
 }
 
-export default function ChatScreen() {
+function ChatScreenContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const leadIdParam = searchParams.get('lead_id');
@@ -245,5 +245,23 @@ export default function ChatScreen() {
       {/* Bottom Navigation */}
       <BottomNav />
     </div>
+  );
+}
+
+export default function ChatScreen() {
+  return (
+    <Suspense fallback={
+      <div className="flex flex-col h-screen bg-gray-50">
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading...</p>
+          </div>
+        </div>
+        <BottomNav />
+      </div>
+    }>
+      <ChatScreenContent />
+    </Suspense>
   );
 }
