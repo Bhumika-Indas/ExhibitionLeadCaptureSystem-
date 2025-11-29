@@ -121,29 +121,56 @@ class WhatsAppService:
         Returns:
             Success status
         """
+        print(f"\n{'='*80}")
+        print(f"📨 SEND EMPLOYEE GREETING - Lead ID: {lead_id}")
+        print(f"{'='*80}")
+
         # Get lead details
         lead = leads_repo.get_lead_by_id(lead_id)
         if not lead:
-            print(f" Cannot send greeting: Lead {lead_id} not found")
+            print(f"❌ Cannot send greeting: Lead {lead_id} not found")
             return False
+
+        print(f"✓ Lead found: {lead.get('CompanyName')} - {lead.get('PrimaryVisitorName')}")
 
         # Sanitize and validate phone number
         phone = lead.get("PrimaryVisitorPhone")
+        print(f"📞 Original phone: {phone}")
+
         if phone:
             phone = sanitize_phone_number(phone)
+            print(f"📞 Sanitized phone: {phone}")
 
         if not phone or len(phone) != 10 or phone[0] not in '6789':
-            print(f" Cannot send greeting: Lead {lead_id} has invalid phone number: {phone}")
+            print(f"❌ Cannot send greeting: Lead {lead_id} has invalid phone number: {phone}")
             return False
+
+        print(f"✓ Phone validated: {phone}")
 
         # Build employee greeting message (simple, no confirmation needed)
         message = self._build_employee_greeting_message(lead)
+        print(f"\n📝 Message to send:")
+        print(f"{'-'*80}")
+        print(message)
+        print(f"{'-'*80}\n")
 
         # Send via WhatsApp (use sanitized phone)
+        print(f"🚀 Calling WhatsApp API...")
+        print(f"   Method: POST")
+        print(f"   Endpoint: /api/send-message")
+        print(f"   To: {phone}")
+
         result = await whatsapp_client.send_text(
             to=phone,
             text=message
         )
+
+        print(f"\n📥 WhatsApp API Result:")
+        print(f"   Success: {result.get('success')}")
+        print(f"   Message ID: {result.get('message_id')}")
+        print(f"   Status: {result.get('status')}")
+        if not result.get('success'):
+            print(f"   Error: {result.get('error')}")
 
         # Log to database
         if result.get("success"):
@@ -1331,19 +1358,24 @@ Our team will confirm shortly.
 
         else:
             # GENERAL_QUERY or unclassified message
-            # For EMPLOYEES: Just log internally, do NOT auto-reply
-            # For VISITORS: Send acknowledgment
+            # Send acknowledgment to both employees and visitors
 
             if is_employee_sender:
-                # Employee sending general message - log internally only
+                # Employee sending general message - log and acknowledge
                 messages_repo.create_message(
                     lead_id=lead_id,
                     sender_type="employee",
-                    message_text=f"💬 Internal note: {text}",
+                    message_text=f"💬 Note: {text}",
                     whatsapp_message_id=str(wa_msg_id)
                 )
-                print(f"📝 Employee internal message logged (no auto-reply sent)")
-                return {"status": "employee_message_logged", "lead_id": lead_id}
+
+                # Send acknowledgment to employee
+                await whatsapp_client.send_text(
+                    to=reply_to_phone,
+                    text="✅ Message received and noted.\n\n- Team INDAS Analytics"
+                )
+                print(f"📝 Employee message logged and acknowledged")
+                return {"status": "employee_message_acknowledged", "lead_id": lead_id}
 
             # Visitor message - process normally
             messages_repo.create_message(
@@ -1838,6 +1870,11 @@ Please prepare quotation.
 
             # Step 10: Store additional data (persons, phones, emails, etc.)
             for idx, person in enumerate(extraction_result.persons):
+                # Skip persons with NULL name (database constraint)
+                if not person.name or not person.name.strip():
+                    print(f"⚠️ Skipping person with NULL/empty name")
+                    continue
+
                 leads_repo.add_person(
                     lead_id=lead_id,
                     name=person.name,

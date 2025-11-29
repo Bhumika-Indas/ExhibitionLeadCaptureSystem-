@@ -74,11 +74,45 @@ class CardExtractor:
 
     def _auto_rotate_image(self, img: np.ndarray) -> np.ndarray:
         """
-        DISABLED: Auto-rotation was causing excessive memory usage
-        Users should take photos in correct orientation
+        Smart auto-rotation: Try all 4 orientations and pick the one with most text.
+        Memory-efficient: Only keeps the best rotation.
         """
-        print("   ⏭️ Auto-rotation disabled (memory optimization)")
-        return img
+        print("   🔄 Smart auto-rotation: testing 4 orientations...")
+
+        reader = self._get_reader()
+
+        # Test all 4 rotations (0°, 90°, 180°, 270°)
+        rotations = [
+            (0, img),  # Original
+            (90, cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)),
+            (180, cv2.rotate(img, cv2.ROTATE_180)),
+            (270, cv2.rotate(img, cv2.ROTATE_90_COUNTERCLOCKWISE))
+        ]
+
+        best_angle = 0
+        best_text_length = 0
+        best_img = img
+
+        for angle, rotated_img in rotations:
+            # Quick OCR test to see which orientation gives most text
+            try:
+                result = reader.readtext(rotated_img, detail=0)
+                text = " ".join(result)
+                text_length = len(text.strip())
+
+                if text_length > best_text_length:
+                    best_text_length = text_length
+                    best_angle = angle
+                    best_img = rotated_img
+            except Exception:
+                continue
+
+        if best_angle != 0:
+            print(f"   ✓ Best orientation: {best_angle}° (extracted {best_text_length} chars)")
+        else:
+            print(f"   ✓ Original orientation is best ({best_text_length} chars)")
+
+        return best_img
 
     # ======================================================================
     # STRONG PHONE EXTRACTION (Fixes OCR mistakes like O→0, I→1)
@@ -160,7 +194,10 @@ class CardExtractor:
         front_phones = self._extract_phones_from_text(front_text)
 
         # ----------------- QR CODE -------------------------
-        qr_data = qr_decoder.decode_from_image(front_image_path)
+        # DISABLED: QR code detection disabled as per requirements
+        # If QR is detected, we skip the card entirely
+        print("\n🚫 QR code detection DISABLED - skipping QR scan")
+        qr_data = None
 
         # ----------------- BACK OCR ------------------------
         back_text = None

@@ -36,6 +36,15 @@ class WhatsAppClient:
         Returns:
             Response dict with message_id and status
         """
+        # Validate phone number before sending
+        if not self._is_valid_phone(to):
+            print(f"❌ BLOCKED: Invalid phone number: {to}")
+            return {
+                "success": False,
+                "error": f"Invalid phone number: {to}",
+                "status": "blocked"
+            }
+
         payload = {
             "to": self._normalize_phone_for_api(to),
             "template": template_name,
@@ -59,6 +68,15 @@ class WhatsAppClient:
         Returns:
             Response dict with message_id and status
         """
+        # Validate phone number before sending
+        if not self._is_valid_phone(to):
+            print(f"❌ BLOCKED: Invalid phone number: {to}")
+            return {
+                "success": False,
+                "error": f"Invalid phone number: {to}",
+                "status": "blocked"
+            }
+
         payload = {
             "to": self._normalize_phone_for_api(to),
             "message": text
@@ -197,6 +215,54 @@ class WhatsAppClient:
                 "error": str(e),
                 "status": "failed"
             }
+
+    @staticmethod
+    def _is_valid_phone(phone: str) -> bool:
+        """
+        Validate if phone number is valid for sending messages.
+
+        Blocks:
+        - Numbers with @lid suffix (WhatsApp Limited Identifiers - fake/masked numbers)
+        - Numbers with @newsletter suffix (WhatsApp Channels - can't send direct messages)
+        - Numbers longer than 15 digits (invalid per E.164 standard)
+        - Empty or None values
+
+        Args:
+            phone: Phone number to validate
+
+        Returns:
+            True if valid, False if should be blocked
+        """
+        if not phone:
+            return False
+
+        # Block LID (Limited Identifier) - these are masked/garbage numbers
+        if "@lid" in phone.lower():
+            print(f"   🚫 BLOCKED: LID detected - {phone}")
+            return False
+
+        # Block newsletter/channel messages - can't send direct messages to channels
+        if "@newsletter" in phone.lower():
+            print(f"   🚫 BLOCKED: Newsletter/Channel detected - {phone}")
+            return False
+
+        # Remove @ suffix to get raw number
+        clean_phone = phone.split("@")[0] if "@" in phone else phone
+
+        # Extract digits only
+        digits = ''.join(c for c in clean_phone if c.isdigit())
+
+        # Block if too long (E.164 max is 15 digits)
+        if len(digits) > 15:
+            print(f"   🚫 BLOCKED: Number too long ({len(digits)} digits) - {phone}")
+            return False
+
+        # Block if too short (minimum 7 digits for landlines)
+        if len(digits) < 7:
+            print(f"   🚫 BLOCKED: Number too short ({len(digits)} digits) - {phone}")
+            return False
+
+        return True
 
     @staticmethod
     def _normalize_phone_for_api(phone: str) -> str:
