@@ -1,9 +1,10 @@
 """
 Final Corrected EasyOCR-based Card Extractor
 Optimized for business cards with:
-- zero thresholding
-- enhanced OCR fallback
-- improved phone regex
+- Lazy loading (memory optimization)
+- Single-pass OCR (reduced memory usage)
+- No auto-rotation (prevents memory spike)
+- Improved phone regex
 - OpenAI fallback + regex merging
 """
 
@@ -11,6 +12,7 @@ import easyocr
 import cv2
 import numpy as np
 import re
+import gc
 from typing import Optional, List
 
 from app.extraction.schemas import CardExtractionResult
@@ -21,9 +23,16 @@ from app.extraction.openai_normalizer import openai_normalizer
 class CardExtractor:
 
     def __init__(self):
-        print("🔧 Initializing EasyOCR (English)...")
-        self.reader = easyocr.Reader(['en'], gpu=False, verbose=False)
-        print("✅ EasyOCR initialized successfully")
+        print("🔧 CardExtractor initialized (EasyOCR will load on first use)")
+        self.reader = None  # Lazy load to save memory
+
+    def _get_reader(self):
+        """Lazy load EasyOCR only when needed"""
+        if self.reader is None:
+            print("🔧 Loading EasyOCR (English)...")
+            self.reader = easyocr.Reader(['en'], gpu=False, verbose=False)
+            print("✅ EasyOCR loaded successfully")
+        return self.reader
 
     # ======================================================================
     # IMAGE ENHANCEMENT (Light enhancement only — NO THRESHOLDING)
@@ -65,50 +74,10 @@ class CardExtractor:
 
     def _auto_rotate_image(self, img: np.ndarray) -> np.ndarray:
         """
-        Auto-detect and fix image rotation using OCR confidence
-        Tries 0°, 90°, 180°, 270° and picks the best orientation
+        DISABLED: Auto-rotation was causing excessive memory usage
+        Users should take photos in correct orientation
         """
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-
-        # Try all 4 orientations
-        best_angle = 0
-        best_text_length = 0
-
-        for angle in [0, 90, 180, 270]:
-            if angle == 0:
-                rotated = img
-            elif angle == 90:
-                rotated = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)
-            elif angle == 180:
-                rotated = cv2.rotate(img, cv2.ROTATE_180)
-            elif angle == 270:
-                rotated = cv2.rotate(img, cv2.ROTATE_90_COUNTERCLOCKWISE)
-
-            # Quick OCR test to see which orientation has most text
-            try:
-                result = self.reader.readtext(rotated, detail=0, paragraph=False)
-                text_length = sum(len(t) for t in result)
-
-                if text_length > best_text_length:
-                    best_text_length = text_length
-                    best_angle = angle
-            except:
-                continue
-
-        # Apply best rotation
-        if best_angle == 0:
-            print(f"   Image is correctly oriented (0°)")
-            return img
-        elif best_angle == 90:
-            print(f"   🔄 Rotating image 90° clockwise")
-            return cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)
-        elif best_angle == 180:
-            print(f"   🔄 Rotating image 180°")
-            return cv2.rotate(img, cv2.ROTATE_180)
-        elif best_angle == 270:
-            print(f"   🔄 Rotating image 270° clockwise (90° counter-clockwise)")
-            return cv2.rotate(img, cv2.ROTATE_90_COUNTERCLOCKWISE)
-
+        print("   ⏭️ Auto-rotation disabled (memory optimization)")
         return img
 
     # ======================================================================
@@ -150,41 +119,27 @@ class CardExtractor:
         return phones
 
     # ======================================================================
-    # INTERNAL OCR with fallback (Enhanced → Raw → Second-pass Enhanced)
+    # INTERNAL OCR - Optimized single pass to save memory
     # ======================================================================
     def _perform_ocr(self, enhanced_img, raw_path) -> str:
-        print("\n🧠 OCR PASS 1 — Enhanced Image")
-        result1 = self.reader.readtext(enhanced_img)
-        text1 = "\n".join([r[1] for r in result1]).strip()
-        print(f"✓ Enhanced OCR chars: {len(text1)}")
+        print("\n🧠 OCR — Single optimized pass")
+        reader = self._get_reader()  # Lazy load
+        result = reader.readtext(enhanced_img)
+        text = "\n".join([r[1] for r in result]).strip()
+        print(f"✓ OCR extracted {len(text)} chars")
 
-        if len(text1) >= 25:
-            return text1
+        # Only fallback to raw if enhanced gave very poor results
+        if len(text) < 10:
+            print("\n⚠️ Fallback to raw image...")
+            raw_img = cv2.imread(raw_path)
+            result2 = reader.readtext(raw_img)
+            text2 = "\n".join([r[1] for r in result2]).strip()
+            if len(text2) > len(text):
+                text = text2
+                print(f"✓ Raw OCR gave {len(text)} chars")
 
-        # ------------------------------------------------------------------
-        print("\n⚠️ Enhanced too weak, trying RAW image...")
-        raw_img = cv2.imread(raw_path)
-        result2 = self.reader.readtext(raw_img)
-        text2 = "\n".join([r[1] for r in result2]).strip()
-        print(f"✓ Raw OCR chars: {len(text2)}")
-
-        if len(text2) > len(text1):
-            best = text2
-        else:
-            best = text1
-
-        # ------------------------------------------------------------------
-        if len(best) < 25:
-            print("\n⚠️ OCR still weak — running second-pass enhancement...")
-            twice = self._enhance_card_image(raw_path)
-            result3 = self.reader.readtext(twice)
-            text3 = "\n".join([r[1] for r in result3]).strip()
-            print(f"✓ Pass-3 OCR chars: {len(text3)}")
-
-            best = max([text1, text2, text3], key=len)
-
-        print(f"📄 Final OCR text size: {len(best)} chars")
-        return best
+        print(f"📄 Final OCR text: {len(text)} chars")
+        return text
 
     # ======================================================================
     # PUBLIC EXTRACT METHOD
@@ -235,6 +190,13 @@ class CardExtractor:
             qr_data=qr_data,
             regex_phones=all_phones,
         )
+
+        # Clean up memory after processing
+        del enhanced_front
+        if back_image_path:
+            del enhanced_back
+        gc.collect()
+        print("🧹 Memory cleaned up")
 
         print(f"\n🎉 FINAL EXTRACTION COMPLETE — Confidence: {result.confidence:.2f}")
         print("=================================================================\n")
