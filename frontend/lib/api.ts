@@ -103,6 +103,22 @@ class ApiClient {
     return data;
   }
 
+  async updateExhibition(exhibitionId: number, exhibition: {
+    name?: string;
+    location?: string;
+    start_date?: string;
+    end_date?: string;
+    description?: string;
+  }): Promise<{ success: boolean; message: string }> {
+    const { data } = await this.client.put(`/api/exhibitions/${exhibitionId}`, exhibition);
+    return data;
+  }
+
+  async deleteExhibition(exhibitionId: number): Promise<{ success: boolean; message: string }> {
+    const { data } = await this.client.delete(`/api/exhibitions/${exhibitionId}`);
+    return data;
+  }
+
   // Leads
   async getLeads(params?: {
     exhibition_id?: number;

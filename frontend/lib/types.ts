@@ -14,7 +14,10 @@ export interface Exhibition {
   Location: string;
   StartDate: string;
   EndDate: string;
+  Description?: string;
   IsActive: boolean;
+  CreatedAt?: string;
+  UpdatedAt?: string;
 }
 
 export interface Lead {
