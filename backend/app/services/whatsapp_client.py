@@ -246,6 +246,11 @@ class WhatsAppClient:
             print(f"   🚫 BLOCKED: Newsletter/Channel detected - {phone}")
             return False
 
+        # Block group messages - can't process group messages
+        if "@g.us" in phone.lower():
+            print(f"   🚫 BLOCKED: WhatsApp Group detected - {phone}")
+            return False
+
         # Remove @ suffix to get raw number
         clean_phone = phone.split("@")[0] if "@" in phone else phone
 

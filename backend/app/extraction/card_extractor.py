@@ -75,44 +75,61 @@ class CardExtractor:
     def _auto_rotate_image(self, img: np.ndarray) -> np.ndarray:
         """
         Smart auto-rotation: Try all 4 orientations and pick the one with most text.
-        Memory-efficient: Only keeps the best rotation.
+        Memory-efficient: Uses downscaled image for testing, applies rotation to full image.
         """
         print("   🔄 Smart auto-rotation: testing 4 orientations...")
 
+        # Downscale for testing (much faster and less memory)
+        max_dimension = 800
+        h, w = img.shape[:2]
+        scale = min(max_dimension / max(h, w), 1.0)
+
+        if scale < 1.0:
+            test_img = cv2.resize(img, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
+            print(f"   📉 Testing with downscaled image: {test_img.shape[:2]} (saves memory)")
+        else:
+            test_img = img
+
         reader = self._get_reader()
 
-        # Test all 4 rotations (0°, 90°, 180°, 270°)
+        # Test all 4 rotations on small image
         rotations = [
-            (0, img),  # Original
-            (90, cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)),
-            (180, cv2.rotate(img, cv2.ROTATE_180)),
-            (270, cv2.rotate(img, cv2.ROTATE_90_COUNTERCLOCKWISE))
+            (0, test_img),
+            (90, cv2.rotate(test_img, cv2.ROTATE_90_CLOCKWISE)),
+            (180, cv2.rotate(test_img, cv2.ROTATE_180)),
+            (270, cv2.rotate(test_img, cv2.ROTATE_90_COUNTERCLOCKWISE))
         ]
 
         best_angle = 0
         best_text_length = 0
-        best_img = img
 
-        for angle, rotated_img in rotations:
-            # Quick OCR test to see which orientation gives most text
+        for angle, rotated_test_img in rotations:
+            # Quick OCR test on downscaled image
             try:
-                result = reader.readtext(rotated_img, detail=0)
+                result = reader.readtext(rotated_test_img, detail=0)
                 text = " ".join(result)
                 text_length = len(text.strip())
 
                 if text_length > best_text_length:
                     best_text_length = text_length
                     best_angle = angle
-                    best_img = rotated_img
-            except Exception:
+            except Exception as e:
+                print(f"   ⚠️ OCR failed for {angle}°: {e}")
                 continue
 
-        if best_angle != 0:
-            print(f"   ✓ Best orientation: {best_angle}° (extracted {best_text_length} chars)")
-        else:
+        # Apply best rotation to FULL-SIZE image
+        if best_angle == 0:
             print(f"   ✓ Original orientation is best ({best_text_length} chars)")
+            return img
+        elif best_angle == 90:
+            rotated = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)
+        elif best_angle == 180:
+            rotated = cv2.rotate(img, cv2.ROTATE_180)
+        else:  # 270
+            rotated = cv2.rotate(img, cv2.ROTATE_90_COUNTERCLOCKWISE)
 
-        return best_img
+        print(f"   ✓ Best orientation: {best_angle}° (extracted {best_text_length} chars from test)")
+        return rotated
 
     # ======================================================================
     # STRONG PHONE EXTRACTION (Fixes OCR mistakes like O→0, I→1)

@@ -2081,6 +2081,12 @@ Please prepare quotation.
 
             print(f"🔍 Webhook from_number after cleaning: {from_number} (original: {original_from})")
 
+            # Block WhatsApp Group messages
+            if "@g.us" in original_from:
+                print(f"🚫 BLOCKED: WhatsApp Group message detected - {original_from}")
+                print(f"   System does not process group messages")
+                return {"status": "ignored", "reason": "group_message"}
+
             # CRITICAL WARNING: LID detected
             if is_lid:
                 print(f"⚠️ ⚠️ ⚠️  CRITICAL: WhatsApp LID (Limited Identifier) detected! ⚠️ ⚠️ ⚠️")
