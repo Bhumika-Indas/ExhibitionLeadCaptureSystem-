@@ -95,8 +95,11 @@ async def process_drip_messages_job():
         logger.info(f"⏰ [CRON] Starting drip message processing at {datetime.now()}")
 
         # Call the drip process endpoint
+        from app.config import settings
+        api_url = f"{settings.API_BASE_URL}/api/drip/process"
+
         async with httpx.AsyncClient(timeout=60.0) as client:
-            response = await client.post('http://localhost:8000/api/drip/process')
+            response = await client.post(api_url)
             result = response.json()
 
             processed = result.get('processed', 0)

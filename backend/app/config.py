@@ -53,6 +53,7 @@ class Settings(BaseSettings):
 
     # API Settings
     API_PREFIX: str = "/api"
+    API_BASE_URL: str = "http://localhost:9000"  # Backend API URL (for internal calls)
     CORS_ORIGINS: list = [
         "http://localhost:3000",
         "http://localhost:3001",
