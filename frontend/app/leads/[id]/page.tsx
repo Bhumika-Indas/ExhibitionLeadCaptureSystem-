@@ -8,6 +8,8 @@ import { requireAuth } from '@/lib/auth';
 import type { LeadDetails } from '@/lib/types';
 import DripSequenceCard from '@/components/DripSequenceCard';
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:9000';
+
 export default function LeadDetailPage() {
   const router = useRouter();
   const params = useParams();
@@ -170,7 +172,7 @@ export default function LeadDetailPage() {
                 .map((attachment) => (
                   <div key={attachment.AttachmentId} className="relative group">
                     <img
-                      src={`http://localhost:8000${attachment.FileUrl}`}
+                      src={`${API_BASE_URL}${attachment.FileUrl}`}
                       alt={attachment.AttachmentType}
                       className="w-full rounded-xl border-2 border-gray-200 shadow-md group-hover:shadow-xl transition-all duration-200 group-hover:scale-[1.02]"
                     />
