@@ -147,6 +147,19 @@ export interface CardExtractionResult {
     services: string[];
     confidence: number;
   };
+  duplicate_check?: {
+    is_duplicate: boolean;
+    duplicate_count: number;
+    duplicates: Array<{
+      lead_id: number;
+      company_name?: string;
+      visitor_name?: string;
+      phone?: string;
+      email?: string;
+      similarity_score: number;
+      created_at?: string;
+    }>;
+  };
   error?: string;
 }
 

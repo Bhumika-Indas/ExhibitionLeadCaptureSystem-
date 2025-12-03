@@ -298,6 +298,17 @@ export default function ChatPage() {
 
       if (result.extraction) {
         const isTwoSided = backImage !== null;
+
+        // Check for duplicates
+        const isDuplicate = result.duplicate_check?.is_duplicate || false;
+        const duplicateCount = result.duplicate_check?.duplicate_count || 0;
+        const topDuplicate = result.duplicate_check?.duplicates?.[0];
+
+        let duplicateWarning = '';
+        if (isDuplicate && topDuplicate) {
+          duplicateWarning = `\n\n⚠️ DUPLICATE DETECTED!\nThis card details already exist in the system:\n• Lead ID: ${topDuplicate.lead_id}\n• ${topDuplicate.visitor_name || 'Unknown'} - ${topDuplicate.company_name || 'Unknown'}\n• Phone: ${topDuplicate.phone || 'N/A'}\n• Similarity: ${topDuplicate.similarity_score}%\n\n${duplicateCount > 1 ? `Found ${duplicateCount} similar leads in total.` : ''}`;
+        }
+
         // Add system message with extracted data
         addMessage({
           sender: "system",
@@ -306,10 +317,12 @@ Name: ${result.extraction.persons?.[0]?.name || 'N/A'}
 Company: ${result.extraction.company_name || 'N/A'}
 Phone: ${result.extraction.phones?.[0] || 'N/A'}
 Email: ${result.extraction.emails?.[0] || 'N/A'}
-${result.extraction.services?.length ? `Services: ${result.extraction.services.join(', ')}` : ''}`,
+${result.extraction.services?.length ? `Services: ${result.extraction.services.join(', ')}` : ''}${duplicateWarning}`,
           extractedData: {
             ...result.extraction,
-            lead_id: result.lead_id
+            lead_id: result.lead_id,
+            is_duplicate: isDuplicate,
+            duplicate_info: topDuplicate
           }
         });
       } else {
