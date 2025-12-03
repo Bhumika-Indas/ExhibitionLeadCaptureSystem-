@@ -309,6 +309,43 @@ export default function ChatPage() {
           duplicateWarning = `\n\n⚠️ DUPLICATE DETECTED!\nThis card details already exist in the system:\n• Lead ID: ${topDuplicate.lead_id}\n• ${topDuplicate.visitor_name || 'Unknown'} - ${topDuplicate.company_name || 'Unknown'}\n• Phone: ${topDuplicate.phone || 'N/A'}\n• Similarity: ${topDuplicate.similarity_score}%\n\n${duplicateCount > 1 ? `Found ${duplicateCount} similar leads in total.` : ''}`;
         }
 
+        // Fetch card images from lead attachments (so they persist after refresh)
+        let cardImages: { front?: string; back?: string } = {};
+        if (result.lead_id) {
+          try {
+            const leadDetails = await api.getLead(result.lead_id);
+            const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:9000';
+
+            const frontAttachment = leadDetails.attachments?.find(a => a.AttachmentType === 'card_front');
+            const backAttachment = leadDetails.attachments?.find(a => a.AttachmentType === 'card_back');
+
+            if (frontAttachment) {
+              cardImages.front = `${API_BASE_URL}${frontAttachment.FileUrl}`;
+            }
+            if (backAttachment) {
+              cardImages.back = `${API_BASE_URL}${backAttachment.FileUrl}`;
+            }
+          } catch (error) {
+            console.error('Failed to fetch card images:', error);
+          }
+        }
+
+        // Add system message with card images
+        if (cardImages.front) {
+          addMessage({
+            sender: "system",
+            image: cardImages.front,
+            text: "Front Side of Visiting Card"
+          });
+        }
+        if (cardImages.back) {
+          addMessage({
+            sender: "system",
+            image: cardImages.back,
+            text: "Back Side of Visiting Card"
+          });
+        }
+
         // Add system message with extracted data
         addMessage({
           sender: "system",
