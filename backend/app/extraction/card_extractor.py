@@ -80,7 +80,8 @@ class CardExtractor:
         print("   🔄 Smart auto-rotation: testing 4 orientations...")
 
         # Downscale for testing (much faster and less memory)
-        max_dimension = 800
+        # Reduced from 800 to 600 to save even more memory on server
+        max_dimension = 600
         h, w = img.shape[:2]
         scale = min(max_dimension / max(h, w), 1.0)
 
@@ -120,6 +121,9 @@ class CardExtractor:
         # Apply best rotation to FULL-SIZE image
         if best_angle == 0:
             print(f"   ✓ Original orientation is best ({best_text_length} chars)")
+            # Clean up test image
+            del test_img
+            gc.collect()
             return img
         elif best_angle == 90:
             rotated = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)
@@ -127,6 +131,10 @@ class CardExtractor:
             rotated = cv2.rotate(img, cv2.ROTATE_180)
         else:  # 270
             rotated = cv2.rotate(img, cv2.ROTATE_90_COUNTERCLOCKWISE)
+
+        # Clean up test image
+        del test_img
+        gc.collect()
 
         print(f"   ✓ Best orientation: {best_angle}° (extracted {best_text_length} chars from test)")
         return rotated
@@ -175,7 +183,19 @@ class CardExtractor:
     def _perform_ocr(self, enhanced_img, raw_path) -> str:
         print("\n🧠 OCR — Single optimized pass")
         reader = self._get_reader()  # Lazy load
-        result = reader.readtext(enhanced_img)
+
+        # CRITICAL: Downscale to max 1920px to prevent OOM on server
+        max_dimension = 1920  # Reduce from 4000x3000 to manageable size
+        h, w = enhanced_img.shape[:2]
+        scale = min(max_dimension / max(h, w), 1.0)
+
+        if scale < 1.0:
+            ocr_img = cv2.resize(enhanced_img, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
+            print(f"   📉 Downscaled for OCR: {enhanced_img.shape[:2]} → {ocr_img.shape[:2]} (prevents OOM)")
+        else:
+            ocr_img = enhanced_img
+
+        result = reader.readtext(ocr_img)
         text = "\n".join([r[1] for r in result]).strip()
         print(f"✓ OCR extracted {len(text)} chars")
 
@@ -183,6 +203,14 @@ class CardExtractor:
         if len(text) < 10:
             print("\n⚠️ Fallback to raw image...")
             raw_img = cv2.imread(raw_path)
+
+            # Also downscale fallback image
+            h2, w2 = raw_img.shape[:2]
+            scale2 = min(max_dimension / max(h2, w2), 1.0)
+            if scale2 < 1.0:
+                raw_img = cv2.resize(raw_img, None, fx=scale2, fy=scale2, interpolation=cv2.INTER_AREA)
+                print(f"   📉 Downscaled fallback: {(h2, w2)} → {raw_img.shape[:2]}")
+
             result2 = reader.readtext(raw_img)
             text2 = "\n".join([r[1] for r in result2]).strip()
             if len(text2) > len(text):

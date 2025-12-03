@@ -419,6 +419,15 @@ class ApiClient {
     await this.client.put(`/api/drip/messages/${messageId}`, updates);
   }
 
+  async createMessageWithMedia(formData: FormData): Promise<{ message_id: number; file_url?: string }> {
+    const { data } = await this.client.post('/api/drip/messages/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return data;
+  }
+
   async deleteMessage(messageId: number): Promise<void> {
     await this.client.delete(`/api/drip/messages/${messageId}`);
   }
